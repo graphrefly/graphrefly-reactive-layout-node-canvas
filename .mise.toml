@@ -1,0 +1,16 @@
+# graphrefly-react — toolchain pinned to match the graphrefly-ts family.
+# Node also recorded in .node-version (24) for corepack / CI / non-mise tools.
+[tools]
+node = "24"
+
+[tasks.bootstrap]
+description = "Enable Corepack (pnpm from package.json) and install dependencies"
+run = "corepack enable && pnpm install"
+
+[tasks.dashboard]
+description = "Regenerate the 监工 dashboard (dashboard/dashboard.html) from plan/slices.jsonl"
+run = "node dashboard/build.mjs"
+
+[tasks.dashboard-check]
+description = "Dashboard consistency gate — non-zero exit on broken state"
+run = "node dashboard/build.mjs --check"
