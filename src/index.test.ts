@@ -35,4 +35,26 @@ describe("@graphrefly/reactive-layout-node-canvas", () => {
 		expect(JSON.stringify(messages)).toContain('"width":15');
 		unsubscribe();
 	});
+
+	it("emits a bounded DATA issue and deactivates cleanly when measurement fails", () => {
+		const g = graph();
+		const measured = nodeCanvasPackageTextMeasurements({
+			graph: g,
+			text: g.state("abc"),
+			font: g.state("10px package"),
+			canvas: {
+				createCanvas() {
+					throw new Error("canvas unavailable");
+				},
+			},
+		});
+		const messages: unknown[] = [];
+		const unsubscribe = measured.subscribe((message) => messages.push(message));
+
+		expect(messages.some((message) => Array.isArray(message) && message[0] === "ERROR")).toBe(
+			false,
+		);
+		expect(JSON.stringify(messages)).toContain('"code":"measurement.failed"');
+		expect(unsubscribe).not.toThrow();
+	});
 });

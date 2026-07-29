@@ -18,8 +18,8 @@ importers:
         specifier: ^2.31.0
         version: 2.31.1(@types/node@25.9.5)
       '@graphrefly/ts':
-        specifier: 0.6.2
-        version: 0.6.2
+        specifier: 0.6.4
+        version: 0.6.4
       '@types/node':
         specifier: ^25.5.0
         version: 25.9.5
@@ -316,8 +316,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@graphrefly/ts@0.6.2':
-    resolution: {integrity: sha512-GJDRo8zTAiVS1IW7a9fmatWA+de9DklTnboWQDCRa8oY3g656Ff4atD8bjlJ9vcSqxzcoylsoxo1uVLJwfELnA==}
+  '@graphrefly/ts@0.6.4':
+    resolution: {integrity: sha512-+1TcgljcaIGkHIPWPPQeM/06WaVb1xBquJkCboC+bt5VBM0zNgaPQAHSWbqNr0BPWPdgTheiCEwT4Cid/HkBmg==}
     peerDependencies:
       '@nestjs/common': ^11.0.0
       '@nestjs/core': ^11.0.0
@@ -1672,7 +1672,7 @@ snapshots:
   '@esbuild/win32-x64@0.27.7':
     optional: true
 
-  '@graphrefly/ts@0.6.2': {}
+  '@graphrefly/ts@0.6.4': {}
 
   '@inquirer/external-editor@1.0.3(@types/node@25.9.5)':
     dependencies:
