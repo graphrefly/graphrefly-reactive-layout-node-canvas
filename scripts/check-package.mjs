@@ -15,33 +15,15 @@ import { dirname, join, resolve } from "node:path";
 const ROOT = resolve(import.meta.dirname, "..");
 const packageRoot = resolve(process.argv[2] ?? ".");
 const packageJson = JSON.parse(readFileSync(join(packageRoot, "package.json"), "utf8"));
+const EXPECTED_PACKAGE_NAME = "@graphrefly/reactive-layout-node-canvas";
+const EXPECTED_REPOSITORY =
+	"git+https://github.com/graphrefly/graphrefly-reactive-layout-node-canvas.git";
 const expectedEntries = {
-	"@graphrefly/nestjs": {
-		".": ["GraphReq", "createNestGraphBoundaryRunner", "fromNestReq", "getNestBoundaryBindings"],
-		"./microservices": ["GraphMessage", "createGraphMessageBridge", "provideGraphMessageProviders"],
-		"./native": [
-			"createGraphExceptionFilter",
-			"createNestGraphGuardAwaitScope",
-			"provideGraphNativeProviders",
-		],
-		"./websockets": ["GraphWs", "createGraphWsBridge", "provideGraphWsProviders"],
-	},
-	"@graphrefly/reactive-layout-node-canvas": {
-		".": ["nodeCanvasPackageTextMeasurements"],
-	},
-	"@graphrefly/solid": {
-		".": ["createNodeInput", "createNodeRecord", "createNodeValue"],
-	},
-	"@graphrefly/svelte": {
-		".": ["nodeReadable", "nodeRecord", "nodeWritable"],
-	},
-	"@graphrefly/vue": {
-		".": ["useNodeInput", "useNodeRecord", "useNodeValue"],
-	},
-}[packageJson.name];
+	".": ["nodeCanvasPackageTextMeasurements"],
+};
 
 function fail(message) {
-	throw new Error(`check-ecosystem-package: ${message}`);
+	throw new Error(`check-node-canvas-package: ${message}`);
 }
 
 function assert(condition, message) {
@@ -57,11 +39,27 @@ function resolveInstalledPackage(name) {
 	return undefined;
 }
 
-assert(expectedEntries, `unknown ecosystem package: ${packageJson.name}`);
+assert(packageJson.name === EXPECTED_PACKAGE_NAME, `unexpected package name: ${packageJson.name}`);
+assert(
+	packageJson.repository?.url === EXPECTED_REPOSITORY,
+	"repository authority must be standalone",
+);
 assert(packageJson.dependencies === undefined, "package must not declare runtime dependencies");
 assert(
 	packageJson.optionalDependencies === undefined,
 	"package must not declare optional dependencies",
+);
+assert(
+	JSON.stringify(packageJson.peerDependencies) ===
+		JSON.stringify({
+			"@graphrefly/ts": ">=0.6.4 <1.0.0",
+			canvas: "^3.2.3",
+		}),
+	"package peer dependencies do not match the reviewed integration boundary",
+);
+assert(
+	packageJson.peerDependenciesMeta?.canvas?.optional === true,
+	"canvas must remain an optional peer",
 );
 assert(packageJson.sideEffects === false, "sideEffects must be false");
 
@@ -139,24 +137,68 @@ try {
 	const nodeTypesLink = join(tmp, "node_modules", "@types", "node");
 	mkdirSync(dirname(nodeTypesLink), { recursive: true });
 	symlinkSync(nodeTypes, nodeTypesLink, "dir");
-	if (packageJson.name === "@graphrefly/reactive-layout-node-canvas") {
-		const canvasInstall = join(tmp, "node_modules", "canvas");
-		mkdirSync(canvasInstall, { recursive: true });
-		writeFileSync(
-			join(canvasInstall, "package.json"),
-			JSON.stringify({ name: "canvas", version: "3.2.3", main: "index.cjs" }),
-		);
-		writeFileSync(
-			join(canvasInstall, "index.cjs"),
-			`exports.createCanvas = () => ({
+
+	writeFileSync(
+		join(tmp, "missing-canvas-esm.mjs"),
+		`import assert from "node:assert/strict";
+import { graph } from "@graphrefly/ts";
+import { nodeCanvasPackageTextMeasurements } from "@graphrefly/reactive-layout-node-canvas";
+const g = graph();
+const measured = nodeCanvasPackageTextMeasurements({
+	graph: g,
+	text: g.state("abc"),
+	font: g.state("10px test"),
+});
+const messages = [];
+const unsubscribe = measured.subscribe((message) => messages.push(message));
+assert.equal(messages.some((message) => message[0] === "ERROR"), false);
+assert.match(JSON.stringify(messages), /"code":"measurement.failed"/);
+unsubscribe();
+`,
+	);
+	writeFileSync(
+		join(tmp, "missing-canvas-cjs.cjs"),
+		`const assert = require("node:assert/strict");
+const { graph } = require("@graphrefly/ts");
+const { nodeCanvasPackageTextMeasurements } = require("@graphrefly/reactive-layout-node-canvas");
+const g = graph();
+const measured = nodeCanvasPackageTextMeasurements({
+	graph: g,
+	text: g.state("abc"),
+	font: g.state("10px test"),
+});
+const messages = [];
+const unsubscribe = measured.subscribe((message) => messages.push(message));
+assert.equal(messages.some((message) => message[0] === "ERROR"), false);
+assert.match(JSON.stringify(messages), /"code":"measurement.failed"/);
+unsubscribe();
+`,
+	);
+	execFileSync(process.execPath, [join(tmp, "missing-canvas-esm.mjs")], {
+		cwd: externalCwd,
+		stdio: "pipe",
+	});
+	execFileSync(process.execPath, [join(tmp, "missing-canvas-cjs.cjs")], {
+		cwd: externalCwd,
+		stdio: "pipe",
+	});
+
+	const canvasInstall = join(tmp, "node_modules", "canvas");
+	mkdirSync(canvasInstall, { recursive: true });
+	writeFileSync(
+		join(canvasInstall, "package.json"),
+		JSON.stringify({ name: "canvas", version: "3.2.3", main: "index.cjs" }),
+	);
+	writeFileSync(
+		join(canvasInstall, "index.cjs"),
+		`exports.createCanvas = () => ({
 	getContext: () => ({
 		font: "",
 		measureText: (text) => ({ width: text.length * 7 }),
 	}),
 });
 `,
-		);
-	}
+	);
 
 	writeFileSync(
 		join(tmp, "esm-smoke.mjs"),
@@ -220,10 +262,9 @@ for (const [subpath, expected] of Object.entries(expectedEntries)) {
 		cwd: tmp,
 		stdio: "inherit",
 	});
-	if (packageJson.name === "@graphrefly/reactive-layout-node-canvas") {
-		writeFileSync(
-			join(tmp, "node-canvas-lazy.mjs"),
-			`import assert from "node:assert/strict";
+	writeFileSync(
+		join(tmp, "node-canvas-measure-esm.mjs"),
+		`import assert from "node:assert/strict";
 import { graph } from "@graphrefly/ts";
 import { nodeCanvasPackageTextMeasurements } from "@graphrefly/reactive-layout-node-canvas";
 const g = graph();
@@ -237,12 +278,35 @@ const unsubscribe = measured.subscribe((message) => messages.push(message));
 assert.match(JSON.stringify(messages), /"width":21/);
 unsubscribe();
 `,
-		);
-		execFileSync(process.execPath, [join(tmp, "node-canvas-lazy.mjs")], {
-			cwd: externalCwd,
-			stdio: "pipe",
-		});
-	}
+	);
+	writeFileSync(
+		join(tmp, "node-canvas-measure-cjs.cjs"),
+		`const assert = require("node:assert/strict");
+const { graph } = require("@graphrefly/ts");
+const { nodeCanvasPackageTextMeasurements } = require("@graphrefly/reactive-layout-node-canvas");
+const g = graph();
+const measured = nodeCanvasPackageTextMeasurements({
+	graph: g,
+	text: g.state("abcd"),
+	font: g.state("10px test"),
+});
+const messages = [];
+const unsubscribe = measured.subscribe((message) => messages.push(message));
+const serialized = JSON.stringify(messages);
+if (!/"width":28/.test(serialized)) {
+	throw messages[1]?.[1]?.[0]?.details ?? new Error(serialized);
+}
+unsubscribe();
+`,
+	);
+	execFileSync(process.execPath, [join(tmp, "node-canvas-measure-esm.mjs")], {
+		cwd: externalCwd,
+		stdio: "pipe",
+	});
+	execFileSync(process.execPath, [join(tmp, "node-canvas-measure-cjs.cjs")], {
+		cwd: externalCwd,
+		stdio: "pipe",
+	});
 } finally {
 	rmSync(tmp, { recursive: true, force: true });
 	rmSync(externalCwd, { recursive: true, force: true });

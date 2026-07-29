@@ -5,7 +5,7 @@ allowBuilds:
   canvas: false
   esbuild: true
 minimumReleaseAgeExclude:
-  - '@graphrefly/ts@0.0.1||0.6.2'
+  - '@graphrefly/ts@0.0.1||0.6.3||0.6.4'
 
 # The concrete `canvas` runtime is caller-owned and optional. CI exercises the
 # integration through an injected fake package instead of downloading/building

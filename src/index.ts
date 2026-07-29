@@ -1,10 +1,10 @@
 import { createRequire } from "node:module";
 import type { Graph, Node } from "@graphrefly/ts";
 import {
-	capabilityTextMeasurements,
+	type MeasurementAdapter,
 	type Measurements,
 	type SegmentAdapter,
-	type TextMeasureCapability,
+	textMeasurementProvider,
 } from "@graphrefly/ts/solutions/reactive-layout";
 
 export interface NodeCanvasTextContextLike {
@@ -46,7 +46,7 @@ function loadCanvasPackage(): NodeCanvasPackageLike {
 	}
 }
 
-class NodeCanvasPackageTextCapability implements TextMeasureCapability {
+class NodeCanvasPackageMeasurementAdapter implements MeasurementAdapter {
 	private context: NodeCanvasTextContextLike | null = null;
 
 	constructor(
@@ -67,7 +67,7 @@ class NodeCanvasPackageTextCapability implements TextMeasureCapability {
 		return context;
 	}
 
-	measureText(text: string, font: string): { readonly width: number } {
+	measureSegment(text: string, font: string): { readonly width: number } {
 		const context = this.getContext();
 		const previousFont = context.font;
 		context.font = font;
@@ -83,19 +83,19 @@ export function nodeCanvasPackageTextMeasurements(
 	opts: NodeCanvasPackageTextMeasurementsOptions,
 ): Node<Measurements> {
 	const targetId = opts.targetId ?? "text";
-	const capability = opts.graph.state<TextMeasureCapability>(
-		new NodeCanvasPackageTextCapability(opts.canvas, opts.width ?? 0, opts.height ?? 0),
+	const adapter = opts.graph.state<MeasurementAdapter>(
+		new NodeCanvasPackageMeasurementAdapter(opts.canvas, opts.width ?? 0, opts.height ?? 0),
 		{
 			name: opts.name
-				? `${opts.name}:node-canvas-measure-capability`
-				: `${targetId}-node-canvas-measure-capability`,
+				? `${opts.name}:node-canvas-measure-adapter`
+				: `${targetId}-node-canvas-measure-adapter`,
 		},
 	);
-	return capabilityTextMeasurements({
+	return textMeasurementProvider({
 		graph: opts.graph,
 		text: opts.text,
 		font: opts.font,
-		capability,
+		adapter,
 		segmentAdapter: opts.segmentAdapter,
 		targetId: opts.targetId,
 		source: opts.source ?? "nodeCanvasPackageTextMeasurements",

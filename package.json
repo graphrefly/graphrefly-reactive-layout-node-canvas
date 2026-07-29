@@ -46,7 +46,7 @@
 		"release": "pnpm run build && changeset publish"
 	},
 	"peerDependencies": {
-		"@graphrefly/ts": ">=0.6.2 <1.0.0",
+		"@graphrefly/ts": ">=0.6.4 <1.0.0",
 		"canvas": "^3.2.3"
 	},
 	"peerDependenciesMeta": {
@@ -58,7 +58,7 @@
 		"@biomejs/biome": "2.4.6",
 		"@changesets/changelog-git": "^0.2.1",
 		"@changesets/cli": "^2.31.0",
-		"@graphrefly/ts": "0.6.2",
+		"@graphrefly/ts": "0.6.4",
 		"@types/node": "^25.5.0",
 		"tsup": "^8.5.1",
 		"typescript": "^5.7.0",
@@ -68,8 +68,5 @@
 		"access": "public"
 	},
 	"packageManager": "pnpm@11.7.0+sha512.19cc852c120c7125760f2443ee6be0ca5b40f9f50598de1a09a1f177503e010e57c23c77646e01e761de59bf874fb22a3398c33ab9691fc13eb946b6f0f4d620",
-	"engines": {
-		"node": ">=24"
-	},
 	"license": "MIT"
 }
